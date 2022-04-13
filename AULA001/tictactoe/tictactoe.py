@@ -4,6 +4,7 @@ Tic Tac Toe Player
 
 from copy import deepcopy
 import math
+import random
 
 X = "X"
 O = "O"
@@ -26,7 +27,7 @@ def player(board):
 
     if board == initial_state():
         return X
-    
+
     counterX = 0
     counterO = 0
 
@@ -36,9 +37,8 @@ def player(board):
 
     if counterX > counterO:
         return O
-    
-    return X
 
+    return X
 
 
 def actions(board):
@@ -79,13 +79,13 @@ def winner(board):
     for row in board:
         if row.count(X) == 3:
             return X
-        
+
         if row.count(O) == 3:
             return O
 
-    for i in range(3):
+    for j in range(3):
         plays = ""
-        for j in range(3):
+        for i in range(3):
             plays += str(board[i][j])
 
         if plays == 'XXX':
@@ -100,10 +100,10 @@ def winner(board):
         dig1 += str(board[i][i])
         dig2 += str(board[i][j])
         j -= 1
-    
+
     if dig1 == 'XXX' or dig2 == 'XXX':
         return X
-    
+
     if dig1 == 'OOO' or dig2 == 'OOO':
         return O
 
@@ -134,57 +134,77 @@ def utility(board):
         return -1
     return 0
 
+actions_explored = 0
 
 def minimax(board):
     """
     Returns the optimal action for the current player on the board.
+    'X' Player is trying to maximise the score, 'O' Player is trying to minimise it
     """
 
-    operation = None
-    a = -math.inf
-    b = math.inf
+    global actions_explored
+    actions_explored = 0
 
-    if player(board) == X:
-        if board == initial_state():
-            return (0, 0)
-        
-        v = -math.inf
-        for action in actions(board):
-            r = minV(result(board, action), a, b)
-            a = max(a, r)
+    def maxValue(board, best_min=10):
 
-            if r > v:
-                v = r
-                operation = action
+        global actions_explored
+
+        if terminal(board):
+            return (utility(board), None)
+
+        value = -10
+        best_action = None
+
+        actionS = actions(board)
+
+        while len(actionS) > 0:
+            action = random.choice(tuple(actionS))
+            actionS.remove(action)
+
+            if best_min <= value:
+                break
+
+            actions_explored += 1
+            minValue_result = minValue(result(board, action), value)
+            if minValue_result[0] > value:
+                best_action = action
+                value = minValue_result[0]
+
+        return (value, best_action)
+
+    def minValue(board, best_max=-10):
+
+        global actions_explored
+
+        if terminal(board):
+            return (utility(board), None)
+
+        value = 10
+        best_action = None
+
+        action_set = actions(board)
+
+        while len(action_set) > 0:
+            action = random.choice(tuple(action_set))
+            action_set.remove(action)
+
+            if best_max >= value:
+                break
+
+            actions_explored += 1
+            maxValue_result = maxValue(result(board, action), value)
+            if maxValue_result[0] < value:
+                best_action = action
+                value = maxValue_result[0]
+
+        return (value, best_action)
+
+    if terminal(board):
+        return None
+
+    if player(board) == 'X':
+        best_move = maxValue(board)[1]
+        return best_move
     else:
-        v = math.inf
-        for action in actions(board):
-            r = maxV(result(board, action), a, b)
-            b = min(b, r)
-
-            if r < v:
-                v = r
-                operation = action
-    return operation
-
-def maxV(board, a, b):
-
-    v = -math.inf
-
-    for action in actions(board):
-        v = max(v, minV(result(board, action), a, b))
-        a = max(a, v)
-        if b <= a:
-            break
-    return v
-
-def minV(board, a, b):
-
-    v = math.inf
-
-    for action in actions(board):
-        v = min(v, maxV(result(board, action), a, b))
-        b = min(b, v)
-        if b <= a:
-            break
-    return v
+        best_move = minValue(board)[1]
+        return best_move
